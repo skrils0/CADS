@@ -4,45 +4,59 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-public class MyTreeSet<E>
+public class MyTreeMap<K, V>
 {
     private const bool RED = true;
     private const bool BLACK = false;
 
-    private readonly IComparer<E> comparator;
+    private readonly IComparer<K> comparator;
     private Node root;
     private int size;
 
     private class Node
     {
-        public E value;
+        public K key;
+        public V value;
         public Node left;
         public Node right;
         public Node parent;
         public bool color;
 
-        public Node(E value, bool color, Node parent)
+        public Node(K key, V value, bool color, Node parent)
         {
+            this.key = key;
             this.value = value;
             this.color = color;
             this.parent = parent;
         }
     }
 
-    // 1. Конструктор без параметров
-    public MyTreeSet()
+    public class MyEntry
     {
-        comparator = Comparer<E>.Default;
+        public K Key { get; }
+        public V Value { get; }
+
+        public MyEntry(K key, V value)
+        {
+            Key = key;
+            Value = value;
+        }
+    }
+
+    // 1. Конструктор без параметров
+    public MyTreeMap()
+    {
+        comparator = Comparer<K>.Default;
         root = null;
         size = 0;
     }
 
     // 2. Конструктор с компаратором
-    public MyTreeSet(IComparer<E> comparator)
+    public MyTreeMap(IComparer<K> comparator)
     {
         if (comparator == null)
         {
-            throw new ArgumentNullException(nameof(comparator), "Компаратор не должен быть null.");
+            throw new ArgumentNullException(nameof(comparator));
         }
 
         this.comparator = comparator;
@@ -50,31 +64,74 @@ public class MyTreeSet<E>
         size = 0;
     }
 
-    // 3. Конструктор из массива
-    public MyTreeSet(E[] a)
+    // 3. Метод Clear
+    public void Clear()
     {
-        if (a == null)
-        {
-            throw new ArgumentNullException(nameof(a), "Массив не должен быть null.");
-        }
-
-        comparator = Comparer<E>.Default;
         root = null;
         size = 0;
-
-        AddAll(a);
     }
 
-    // 4. Метод Add
-    public bool Add(E value)
+    // 4. Метод IsEmpty
+    public bool IsEmpty()
     {
-        ValidateValue(value);
+        return size == 0;
+    }
+
+    // 5. Метод Size
+    public int Size()
+    {
+        return size;
+    }
+
+    // 6. Метод ContainsKey
+    public bool ContainsKey(object key)
+    {
+        if (key == null)
+        {
+            return false;
+        }
+
+        if (!(key is K typedKey))
+        {
+            return false;
+        }
+
+        return FindNode(typedKey) != null;
+    }
+
+    // 7. Метод Get
+    public V Get(object key)
+    {
+        if (key == null)
+        {
+            return default(V);
+        }
+
+        if (!(key is K typedKey))
+        {
+            return default(V);
+        }
+
+        Node node = FindNode(typedKey);
+
+        if (node == null)
+        {
+            return default(V);
+        }
+
+        return node.value;
+    }
+
+    // 8. Метод Put
+    public void Put(K key, V value)
+    {
+        ValidateKey(key);
 
         if (root == null)
         {
-            root = new Node(value, BLACK, null);
+            root = new Node(key, value, BLACK, null);
             size = 1;
-            return true;
+            return;
         }
 
         Node current = root;
@@ -84,7 +141,7 @@ public class MyTreeSet<E>
         while (current != null)
         {
             parent = current;
-            comparison = CompareValues(value, current.value);
+            comparison = CompareKeys(key, current.key);
 
             if (comparison < 0)
             {
@@ -96,11 +153,12 @@ public class MyTreeSet<E>
             }
             else
             {
-                return false;
+                current.value = value;
+                return;
             }
         }
 
-        Node newNode = new Node(value, RED, parent);
+        Node newNode = new Node(key, value, RED, parent);
 
         if (comparison < 0)
         {
@@ -113,271 +171,213 @@ public class MyTreeSet<E>
 
         FixAfterInsert(newNode);
         size++;
-        return true;
     }
 
-    // 5. Метод AddAll
-    public bool AddAll(E[] a)
+    // 9. Метод Remove
+    public V Remove(object key)
     {
-        if (a == null)
+        if (key == null)
         {
-            throw new ArgumentNullException(nameof(a), "Массив не должен быть null.");
+            return default(V);
         }
 
-        bool changed = false;
-
-        for (int i = 0; i < a.Length; i++)
+        if (!(key is K typedKey))
         {
-            if (Add(a[i]))
-            {
-                changed = true;
-            }
+            return default(V);
         }
 
-        return changed;
-    }
-
-    // 6. Метод Contains
-    public bool Contains(object value)
-    {
-        if (value == null)
-        {
-            return false;
-        }
-
-        if (!(value is E typedValue))
-        {
-            return false;
-        }
-
-        return FindNode(typedValue) != null;
-    }
-
-    // 7. Метод Remove
-    public bool Remove(object value)
-    {
-        if (value == null)
-        {
-            return false;
-        }
-
-        if (!(value is E typedValue))
-        {
-            return false;
-        }
-
-        Node node = FindNode(typedValue);
+        Node node = FindNode(typedKey);
 
         if (node == null)
         {
-            return false;
+            return default(V);
         }
 
+        V oldValue = node.value;
         DeleteNode(node);
         size--;
-        return true;
+        return oldValue;
     }
 
-    // 8. Метод Clear
-    public void Clear()
+    // 10. Метод KeySet
+    public List<K> KeySet()
     {
-        root = null;
-        size = 0;
+        List<K> keys = new List<K>();
+        TraverseInOrder(root, keys);
+        return keys;
     }
 
-    // 9. Метод IsEmpty
-    public bool IsEmpty()
-    {
-        return size == 0;
-    }
-
-    // 10. Метод Size
-    public int Size()
-    {
-        return size;
-    }
-
-    // 11. Метод First
-    public E First()
+    // 11. Метод FirstKey
+    public K FirstKey()
     {
         if (root == null)
         {
-            throw new InvalidOperationException("Множество пустое.");
+            throw new InvalidOperationException("Отображение пустое.");
         }
 
-        return GetFirstNode(root).value;
+        return GetFirstNode(root).key;
     }
 
-    // 12. Метод Last
-    public E Last()
+    // 12. Метод LastKey
+    public K LastKey()
     {
         if (root == null)
         {
-            throw new InvalidOperationException("Множество пустое.");
+            throw new InvalidOperationException("Отображение пустое.");
         }
 
-        return GetLastNode(root).value;
+        return GetLastNode(root).key;
     }
 
-    // 13. Метод Lower
-    public E Lower(E value)
+    // 13. Метод LowerKey
+    public K LowerKey(K key)
     {
-        ValidateValue(value);
+        ValidateKey(key);
 
-        Node node = FindLowerNode(value);
+        Node node = FindLowerNode(key);
 
         if (node == null)
         {
-            return default(E);
+            return default(K);
         }
 
-        return node.value;
+        return node.key;
     }
 
-    // 14. Метод Floor
-    public E Floor(E value)
+    // 14. Метод FloorKey
+    public K FloorKey(K key)
     {
-        ValidateValue(value);
+        ValidateKey(key);
 
-        Node node = FindFloorNode(value);
+        Node node = FindFloorNode(key);
 
         if (node == null)
         {
-            return default(E);
+            return default(K);
         }
 
-        return node.value;
+        return node.key;
     }
 
-    // 15. Метод Higher
-    public E Higher(E value)
+    // 15. Метод HigherKey
+    public K HigherKey(K key)
     {
-        ValidateValue(value);
+        ValidateKey(key);
 
-        Node node = FindHigherNode(value);
+        Node node = FindHigherNode(key);
 
         if (node == null)
         {
-            return default(E);
+            return default(K);
         }
 
-        return node.value;
+        return node.key;
     }
 
-    // 16. Метод Ceiling
-    public E Ceiling(E value)
+    // 16. Метод CeilingKey
+    public K CeilingKey(K key)
     {
-        ValidateValue(value);
+        ValidateKey(key);
 
-        Node node = FindCeilingNode(value);
+        Node node = FindCeilingNode(key);
 
         if (node == null)
         {
-            return default(E);
+            return default(K);
         }
 
-        return node.value;
+        return node.key;
     }
 
-    // 17. Метод PollFirst
-    public E PollFirst()
+    // 17. Метод HeadMap
+    public MyTreeMap<K, V> HeadMap(K toKey)
     {
-        if (root == null)
-        {
-            return default(E);
-        }
+        ValidateKey(toKey);
 
-        Node firstNode = GetFirstNode(root);
-        E result = firstNode.value;
-        DeleteNode(firstNode);
-        size--;
-
+        MyTreeMap<K, V> result = new MyTreeMap<K, V>(comparator);
+        FillHeadMap(root, toKey, result);
         return result;
     }
 
-    // 18. Метод PollLast
-    public E PollLast()
+    // 18. Метод TailMap
+    public MyTreeMap<K, V> TailMap(K fromKey)
     {
-        if (root == null)
-        {
-            return default(E);
-        }
+        ValidateKey(fromKey);
 
-        Node lastNode = GetLastNode(root);
-        E result = lastNode.value;
-        DeleteNode(lastNode);
-        size--;
-
+        MyTreeMap<K, V> result = new MyTreeMap<K, V>(comparator);
+        FillTailMap(root, fromKey, result);
         return result;
     }
 
-    // 19. Метод ToArray
-    public E[] ToArray()
+    // 19. Метод SubMap
+    public MyTreeMap<K, V> SubMap(K fromKey, K toKey)
     {
-        List<E> list = new List<E>();
-        TraverseInOrder(root, list);
-        return list.ToArray();
-    }
+        ValidateKey(fromKey);
+        ValidateKey(toKey);
 
-    // 20. Метод HeadSet
-    public E[] HeadSet(E toElement)
-    {
-        ValidateValue(toElement);
-
-        List<E> list = new List<E>();
-        FillHeadSet(root, toElement, list);
-        return list.ToArray();
-    }
-
-    // 21. Метод TailSet
-    public E[] TailSet(E fromElement)
-    {
-        ValidateValue(fromElement);
-
-        List<E> list = new List<E>();
-        FillTailSet(root, fromElement, list);
-        return list.ToArray();
-    }
-
-    // 22. Метод SubSet
-    public E[] SubSet(E fromElement, E toElement)
-    {
-        ValidateValue(fromElement);
-        ValidateValue(toElement);
-
-        if (CompareValues(fromElement, toElement) > 0)
+        if (CompareKeys(fromKey, toKey) > 0)
         {
-            throw new ArgumentException("Левая граница должна быть меньше или равна правой.");
+            throw new ArgumentException("Левая граница больше правой.");
         }
 
-        List<E> list = new List<E>();
-        FillSubSet(root, fromElement, toElement, list);
-        return list.ToArray();
+        MyTreeMap<K, V> result = new MyTreeMap<K, V>(comparator);
+        FillSubMap(root, fromKey, toKey, result);
+        return result;
     }
 
-    // 23. Вспомогательный метод CompareValues
-    private int CompareValues(E firstValue, E secondValue)
+    // 20. Метод PollFirstEntry
+    public MyEntry PollFirstEntry()
     {
-        return comparator.Compare(firstValue, secondValue);
-    }
-
-    // 24. Вспомогательный метод ValidateValue
-    private void ValidateValue(E value)
-    {
-        if (value == null)
+        if (root == null)
         {
-            throw new ArgumentNullException(nameof(value), "Элемент не должен быть null.");
+            return null;
+        }
+
+        Node first = GetFirstNode(root);
+        MyEntry result = new MyEntry(first.key, first.value);
+        DeleteNode(first);
+        size--;
+        return result;
+    }
+
+    // 21. Метод PollLastEntry
+    public MyEntry PollLastEntry()
+    {
+        if (root == null)
+        {
+            return null;
+        }
+
+        Node last = GetLastNode(root);
+        MyEntry result = new MyEntry(last.key, last.value);
+        DeleteNode(last);
+        size--;
+        return result;
+    }
+
+    // 22. Вспомогательный метод ValidateKey
+    private void ValidateKey(K key)
+    {
+        if (key == null)
+        {
+            throw new ArgumentNullException(nameof(key));
         }
     }
 
-    // 25. Вспомогательный метод FindNode
-    private Node FindNode(E value)
+    // 23. Вспомогательный метод CompareKeys
+    private int CompareKeys(K firstKey, K secondKey)
+    {
+        return comparator.Compare(firstKey, secondKey);
+    }
+
+    // 24. Вспомогательный метод FindNode
+    private Node FindNode(K key)
     {
         Node current = root;
 
         while (current != null)
         {
-            int comparison = CompareValues(value, current.value);
+            int comparison = CompareKeys(key, current.key);
 
             if (comparison < 0)
             {
@@ -396,7 +396,7 @@ public class MyTreeSet<E>
         return null;
     }
 
-    // 26. Вспомогательный метод GetFirstNode
+    // 25. Вспомогательный метод GetFirstNode
     private Node GetFirstNode(Node node)
     {
         Node current = node;
@@ -409,7 +409,7 @@ public class MyTreeSet<E>
         return current;
     }
 
-    // 27. Вспомогательный метод GetLastNode
+    // 26. Вспомогательный метод GetLastNode
     private Node GetLastNode(Node node)
     {
         Node current = node;
@@ -422,99 +422,28 @@ public class MyTreeSet<E>
         return current;
     }
 
-    // 28. Вспомогательный метод TraverseInOrder
-    private void TraverseInOrder(Node node, List<E> list)
+    // 27. Вспомогательный метод TraverseInOrder
+    private void TraverseInOrder(Node node, List<K> keys)
     {
         if (node == null)
         {
             return;
         }
 
-        TraverseInOrder(node.left, list);
-        list.Add(node.value);
-        TraverseInOrder(node.right, list);
+        TraverseInOrder(node.left, keys);
+        keys.Add(node.key);
+        TraverseInOrder(node.right, keys);
     }
 
-    // 29. Вспомогательный метод FillHeadSet
-    private void FillHeadSet(Node node, E toElement, List<E> list)
-    {
-        if (node == null)
-        {
-            return;
-        }
-
-        int comparison = CompareValues(node.value, toElement);
-
-        if (comparison < 0)
-        {
-            FillHeadSet(node.left, toElement, list);
-            list.Add(node.value);
-            FillHeadSet(node.right, toElement, list);
-        }
-        else
-        {
-            FillHeadSet(node.left, toElement, list);
-        }
-    }
-
-    // 30. Вспомогательный метод FillTailSet
-    private void FillTailSet(Node node, E fromElement, List<E> list)
-    {
-        if (node == null)
-        {
-            return;
-        }
-
-        int comparison = CompareValues(node.value, fromElement);
-
-        if (comparison >= 0)
-        {
-            FillTailSet(node.left, fromElement, list);
-            list.Add(node.value);
-            FillTailSet(node.right, fromElement, list);
-        }
-        else
-        {
-            FillTailSet(node.right, fromElement, list);
-        }
-    }
-
-    // 31. Вспомогательный метод FillSubSet
-    private void FillSubSet(Node node, E fromElement, E toElement, List<E> list)
-    {
-        if (node == null)
-        {
-            return;
-        }
-
-        int lowerComparison = CompareValues(node.value, fromElement);
-        int upperComparison = CompareValues(node.value, toElement);
-
-        if (lowerComparison >= 0)
-        {
-            FillSubSet(node.left, fromElement, toElement, list);
-        }
-
-        if (lowerComparison >= 0 && upperComparison < 0)
-        {
-            list.Add(node.value);
-        }
-
-        if (upperComparison < 0)
-        {
-            FillSubSet(node.right, fromElement, toElement, list);
-        }
-    }
-
-    // 32. Вспомогательный метод FindLowerNode
-    private Node FindLowerNode(E value)
+    // 28. Вспомогательный метод FindLowerNode
+    private Node FindLowerNode(K key)
     {
         Node current = root;
         Node candidate = null;
 
         while (current != null)
         {
-            int comparison = CompareValues(value, current.value);
+            int comparison = CompareKeys(key, current.key);
 
             if (comparison <= 0)
             {
@@ -530,15 +459,15 @@ public class MyTreeSet<E>
         return candidate;
     }
 
-    // 33. Вспомогательный метод FindFloorNode
-    private Node FindFloorNode(E value)
+    // 29. Вспомогательный метод FindFloorNode
+    private Node FindFloorNode(K key)
     {
         Node current = root;
         Node candidate = null;
 
         while (current != null)
         {
-            int comparison = CompareValues(value, current.value);
+            int comparison = CompareKeys(key, current.key);
 
             if (comparison < 0)
             {
@@ -558,15 +487,15 @@ public class MyTreeSet<E>
         return candidate;
     }
 
-    // 34. Вспомогательный метод FindHigherNode
-    private Node FindHigherNode(E value)
+    // 30. Вспомогательный метод FindHigherNode
+    private Node FindHigherNode(K key)
     {
         Node current = root;
         Node candidate = null;
 
         while (current != null)
         {
-            int comparison = CompareValues(value, current.value);
+            int comparison = CompareKeys(key, current.key);
 
             if (comparison < 0)
             {
@@ -582,15 +511,15 @@ public class MyTreeSet<E>
         return candidate;
     }
 
-    // 35. Вспомогательный метод FindCeilingNode
-    private Node FindCeilingNode(E value)
+    // 31. Вспомогательный метод FindCeilingNode
+    private Node FindCeilingNode(K key)
     {
         Node current = root;
         Node candidate = null;
 
         while (current != null)
         {
-            int comparison = CompareValues(value, current.value);
+            int comparison = CompareKeys(key, current.key);
 
             if (comparison <= 0)
             {
@@ -606,7 +535,78 @@ public class MyTreeSet<E>
         return candidate;
     }
 
-    // 36. Вспомогательный метод ColorOf
+    // 32. Вспомогательный метод FillHeadMap
+    private void FillHeadMap(Node node, K toKey, MyTreeMap<K, V> result)
+    {
+        if (node == null)
+        {
+            return;
+        }
+
+        int comparison = CompareKeys(node.key, toKey);
+
+        if (comparison < 0)
+        {
+            FillHeadMap(node.left, toKey, result);
+            result.Put(node.key, node.value);
+            FillHeadMap(node.right, toKey, result);
+        }
+        else
+        {
+            FillHeadMap(node.left, toKey, result);
+        }
+    }
+
+    // 33. Вспомогательный метод FillTailMap
+    private void FillTailMap(Node node, K fromKey, MyTreeMap<K, V> result)
+    {
+        if (node == null)
+        {
+            return;
+        }
+
+        int comparison = CompareKeys(node.key, fromKey);
+
+        if (comparison >= 0)
+        {
+            FillTailMap(node.left, fromKey, result);
+            result.Put(node.key, node.value);
+            FillTailMap(node.right, fromKey, result);
+        }
+        else
+        {
+            FillTailMap(node.right, fromKey, result);
+        }
+    }
+
+    // 34. Вспомогательный метод FillSubMap
+    private void FillSubMap(Node node, K fromKey, K toKey, MyTreeMap<K, V> result)
+    {
+        if (node == null)
+        {
+            return;
+        }
+
+        int lowerComparison = CompareKeys(node.key, fromKey);
+        int upperComparison = CompareKeys(node.key, toKey);
+
+        if (lowerComparison >= 0)
+        {
+            FillSubMap(node.left, fromKey, toKey, result);
+        }
+
+        if (lowerComparison >= 0 && upperComparison < 0)
+        {
+            result.Put(node.key, node.value);
+        }
+
+        if (upperComparison < 0)
+        {
+            FillSubMap(node.right, fromKey, toKey, result);
+        }
+    }
+
+    // 35. Вспомогательный метод ColorOf
     private bool ColorOf(Node node)
     {
         if (node == null)
@@ -617,7 +617,7 @@ public class MyTreeSet<E>
         return node.color;
     }
 
-    // 37. Вспомогательный метод ParentOf
+    // 36. Вспомогательный метод ParentOf
     private Node ParentOf(Node node)
     {
         if (node == null)
@@ -628,7 +628,7 @@ public class MyTreeSet<E>
         return node.parent;
     }
 
-    // 38. Вспомогательный метод LeftOf
+    // 37. Вспомогательный метод LeftOf
     private Node LeftOf(Node node)
     {
         if (node == null)
@@ -639,7 +639,7 @@ public class MyTreeSet<E>
         return node.left;
     }
 
-    // 39. Вспомогательный метод RightOf
+    // 38. Вспомогательный метод RightOf
     private Node RightOf(Node node)
     {
         if (node == null)
@@ -650,7 +650,7 @@ public class MyTreeSet<E>
         return node.right;
     }
 
-    // 40. Вспомогательный метод SetColor
+    // 39. Вспомогательный метод SetColor
     private void SetColor(Node node, bool color)
     {
         if (node != null)
@@ -659,7 +659,7 @@ public class MyTreeSet<E>
         }
     }
 
-    // 41. Вспомогательный метод RotateLeft
+    // 40. Вспомогательный метод RotateLeft
     private void RotateLeft(Node node)
     {
         if (node == null)
@@ -694,7 +694,7 @@ public class MyTreeSet<E>
         node.parent = rightChild;
     }
 
-    // 42. Вспомогательный метод RotateRight
+    // 41. Вспомогательный метод RotateRight
     private void RotateRight(Node node)
     {
         if (node == null)
@@ -729,7 +729,7 @@ public class MyTreeSet<E>
         node.parent = leftChild;
     }
 
-    // 43. Вспомогательный метод FixAfterInsert
+    // 42. Вспомогательный метод FixAfterInsert
     private void FixAfterInsert(Node node)
     {
         node.color = RED;
@@ -789,7 +789,7 @@ public class MyTreeSet<E>
         root.color = BLACK;
     }
 
-    // 44. Вспомогательный метод Successor
+    // 43. Вспомогательный метод Successor
     private Node Successor(Node node)
     {
         if (node == null)
@@ -821,12 +821,13 @@ public class MyTreeSet<E>
         return parent;
     }
 
-    // 45. Вспомогательный метод DeleteNode
+    // 44. Вспомогательный метод DeleteNode
     private void DeleteNode(Node node)
     {
         if (node.left != null && node.right != null)
         {
             Node successor = Successor(node);
+            node.key = successor.key;
             node.value = successor.value;
             node = successor;
         }
@@ -895,7 +896,7 @@ public class MyTreeSet<E>
         }
     }
 
-    // 46. Вспомогательный метод FixAfterDelete
+    // 45. Вспомогательный метод FixAfterDelete
     private void FixAfterDelete(Node node)
     {
         while (node != root && ColorOf(node) == BLACK)
@@ -973,7 +974,350 @@ public class MyTreeSet<E>
         SetColor(node, BLACK);
     }
 }
+public class MyTreeSet<E>
+{
+    private static readonly object PRESENT = new object();
 
+    private MyTreeMap<E, object> m;
+
+    // 1. Конструктор без параметров
+    public MyTreeSet()
+    {
+        m = new MyTreeMap<E, object>();
+    }
+
+    // 2. Конструктор с компаратором
+    public MyTreeSet(IComparer<E> comparator)
+    {
+        if (comparator == null)
+        {
+            throw new ArgumentNullException(nameof(comparator));
+        }
+
+        m = new MyTreeMap<E, object>(comparator);
+    }
+
+    // 3. Конструктор из массива
+    public MyTreeSet(E[] array)
+    {
+        if (array == null)
+        {
+            throw new ArgumentNullException(nameof(array));
+        }
+
+        m = new MyTreeMap<E, object>();
+        AddAll(array);
+    }
+
+    // 4. Метод Add
+    public bool Add(E element)
+    {
+        ValidateElement(element);
+
+        if (m.ContainsKey(element))
+        {
+            return false;
+        }
+
+        m.Put(element, PRESENT);
+        return true;
+    }
+
+    // 5. Метод AddAll
+    public bool AddAll(E[] array)
+    {
+        if (array == null)
+        {
+            throw new ArgumentNullException(nameof(array));
+        }
+
+        bool changed = false;
+
+        for (int i = 0; i < array.Length; i++)
+        {
+            if (Add(array[i]))
+            {
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    // 6. Метод Clear
+    public void Clear()
+    {
+        m.Clear();
+    }
+
+    // 7. Метод Contains
+    public bool Contains(object element)
+    {
+        return m.ContainsKey(element);
+    }
+
+    // 8. Метод ContainsAll
+    public bool ContainsAll(E[] array)
+    {
+        if (array == null)
+        {
+            throw new ArgumentNullException(nameof(array));
+        }
+
+        for (int i = 0; i < array.Length; i++)
+        {
+            if (!Contains(array[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // 9. Метод IsEmpty
+    public bool IsEmpty()
+    {
+        return m.IsEmpty();
+    }
+
+    // 10. Метод Remove
+    public bool Remove(object element)
+    {
+        if (!m.ContainsKey(element))
+        {
+            return false;
+        }
+
+        m.Remove(element);
+        return true;
+    }
+
+    // 11. Метод RemoveAll
+    public bool RemoveAll(E[] array)
+    {
+        if (array == null)
+        {
+            throw new ArgumentNullException(nameof(array));
+        }
+
+        bool changed = false;
+
+        for (int i = 0; i < array.Length; i++)
+        {
+            if (Remove(array[i]))
+            {
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    // 12. Метод RetainAll
+    public bool RetainAll(E[] array)
+    {
+        if (array == null)
+        {
+            throw new ArgumentNullException(nameof(array));
+        }
+
+        bool changed = false;
+        List<E> keys = m.KeySet();
+
+        for (int i = 0; i < keys.Count; i++)
+        {
+            if (!ArrayContains(array, keys[i]))
+            {
+                m.Remove(keys[i]);
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    // 13. Метод Size
+    public int Size()
+    {
+        return m.Size();
+    }
+
+    // 14. Метод ToArray без параметров
+    public object[] ToArray()
+    {
+        List<E> keys = m.KeySet();
+        object[] result = new object[keys.Count];
+
+        for (int i = 0; i < keys.Count; i++)
+        {
+            result[i] = keys[i];
+        }
+
+        return result;
+    }
+
+    // 15. Метод ToArray с массивом
+    public E[] ToArray(E[] array)
+    {
+        List<E> keys = m.KeySet();
+
+        if (array == null || array.Length < keys.Count)
+        {
+            array = new E[keys.Count];
+        }
+
+        for (int i = 0; i < keys.Count; i++)
+        {
+            array[i] = keys[i];
+        }
+
+        if (array.Length > keys.Count)
+        {
+            array[keys.Count] = default(E);
+        }
+
+        return array;
+    }
+
+    // 16. Метод First
+    public E First()
+    {
+        return m.FirstKey();
+    }
+
+    // 17. Метод Last
+    public E Last()
+    {
+        return m.LastKey();
+    }
+
+    // 18. Метод Lower
+    public E Lower(E element)
+    {
+        ValidateElement(element);
+        return m.LowerKey(element);
+    }
+
+    // 19. Метод Floor
+    public E Floor(E element)
+    {
+        ValidateElement(element);
+        return m.FloorKey(element);
+    }
+
+    // 20. Метод Higher
+    public E Higher(E element)
+    {
+        ValidateElement(element);
+        return m.HigherKey(element);
+    }
+
+    // 21. Метод Ceiling
+    public E Ceiling(E element)
+    {
+        ValidateElement(element);
+        return m.CeilingKey(element);
+    }
+
+    // 22. Метод PollFirst
+    public E PollFirst()
+    {
+        MyTreeMap<E, object>.MyEntry entry = m.PollFirstEntry();
+
+        if (entry == null)
+        {
+            return default(E);
+        }
+
+        return entry.Key;
+    }
+
+    // 23. Метод PollLast
+    public E PollLast()
+    {
+        MyTreeMap<E, object>.MyEntry entry = m.PollLastEntry();
+
+        if (entry == null)
+        {
+            return default(E);
+        }
+
+        return entry.Key;
+    }
+
+    // 24. Метод HeadSet
+    public MyTreeSet<E> HeadSet(E toElement)
+    {
+        ValidateElement(toElement);
+
+        MyTreeMap<E, object> map = m.HeadMap(toElement);
+        MyTreeSet<E> result = new MyTreeSet<E>();
+
+        foreach (E key in map.KeySet())
+        {
+            result.Add(key);
+        }
+
+        return result;
+    }
+
+    // 25. Метод TailSet
+    public MyTreeSet<E> TailSet(E fromElement)
+    {
+        ValidateElement(fromElement);
+
+        MyTreeMap<E, object> map = m.TailMap(fromElement);
+        MyTreeSet<E> result = new MyTreeSet<E>();
+
+        foreach (E key in map.KeySet())
+        {
+            result.Add(key);
+        }
+
+        return result;
+    }
+
+    // 26. Метод SubSet
+    public MyTreeSet<E> SubSet(E fromElement, E toElement)
+    {
+        ValidateElement(fromElement);
+        ValidateElement(toElement);
+
+        MyTreeMap<E, object> map = m.SubMap(fromElement, toElement);
+        MyTreeSet<E> result = new MyTreeSet<E>();
+
+        foreach (E key in map.KeySet())
+        {
+            result.Add(key);
+        }
+
+        return result;
+    }
+
+    // 27. Вспомогательный метод ValidateElement
+    private void ValidateElement(E element)
+    {
+        if (element == null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+    }
+
+    // 28. Вспомогательный метод ArrayContains
+    private bool ArrayContains(E[] array, E value)
+    {
+        for (int i = 0; i < array.Length; i++)
+        {
+            if (Equals(array[i], value))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
 internal class Program
 {
     static void Main(string[] args)
@@ -998,14 +1342,11 @@ internal class Program
         Console.WriteLine("Ceiling(10): " + set.Ceiling(10));
 
         Console.WriteLine("Элементы:");
-        int[] array = set.ToArray();
+        object[] array = set.ToArray();
 
         for (int i = 0; i < array.Length; i++)
         {
             Console.WriteLine(array[i]);
         }
-
-        Console.WriteLine("Удаляем 10: " + set.Remove(10));
-        Console.WriteLine("Новый размер: " + set.Size());
     }
 }
