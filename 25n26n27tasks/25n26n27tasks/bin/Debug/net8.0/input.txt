@@ -1,0 +1,9 @@
+Hello world from CSharp
+abc de fghi
+One two three
+Cat dog elephant
+This is a test line
+AbC abc ABC
+Hello, world! Test123 test.
+apple banana APPLE orange
+CSharp is cool and CSHARP is powerful

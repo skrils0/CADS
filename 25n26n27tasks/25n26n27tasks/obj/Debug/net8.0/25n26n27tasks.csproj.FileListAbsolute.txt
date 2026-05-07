@@ -1,0 +1,15 @@
+E:\vysnedou\25n26n27tasks\25n26n27tasks\bin\Debug\net8.0\25n26n27tasks.exe
+E:\vysnedou\25n26n27tasks\25n26n27tasks\bin\Debug\net8.0\25n26n27tasks.deps.json
+E:\vysnedou\25n26n27tasks\25n26n27tasks\bin\Debug\net8.0\25n26n27tasks.runtimeconfig.json
+E:\vysnedou\25n26n27tasks\25n26n27tasks\bin\Debug\net8.0\25n26n27tasks.dll
+E:\vysnedou\25n26n27tasks\25n26n27tasks\bin\Debug\net8.0\25n26n27tasks.pdb
+E:\vysnedou\25n26n27tasks\25n26n27tasks\obj\Debug\net8.0\25n26n27tasks.GeneratedMSBuildEditorConfig.editorconfig
+E:\vysnedou\25n26n27tasks\25n26n27tasks\obj\Debug\net8.0\25n26n27tasks.AssemblyInfoInputs.cache
+E:\vysnedou\25n26n27tasks\25n26n27tasks\obj\Debug\net8.0\25n26n27tasks.AssemblyInfo.cs
+E:\vysnedou\25n26n27tasks\25n26n27tasks\obj\Debug\net8.0\25n26n27tasks.csproj.CoreCompileInputs.cache
+E:\vysnedou\25n26n27tasks\25n26n27tasks\obj\Debug\net8.0\25n26n27tasks.sourcelink.json
+E:\vysnedou\25n26n27tasks\25n26n27tasks\obj\Debug\net8.0\25n26n27tasks.dll
+E:\vysnedou\25n26n27tasks\25n26n27tasks\obj\Debug\net8.0\refint\25n26n27tasks.dll
+E:\vysnedou\25n26n27tasks\25n26n27tasks\obj\Debug\net8.0\25n26n27tasks.pdb
+E:\vysnedou\25n26n27tasks\25n26n27tasks\obj\Debug\net8.0\25n26n27tasks.genruntimeconfig.cache
+E:\vysnedou\25n26n27tasks\25n26n27tasks\obj\Debug\net8.0\ref\25n26n27tasks.dll
